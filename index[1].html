@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Custom Bingo</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #word-input {
+      margin-bottom: 20px;
+    }
+    #custom-word {
+      width: 60%;
+      padding: 8px;
+    }
+    #word-pool {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .word {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      margin: 4px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .selected {
+      background-color: #90ee90;
+    }
+    #bingo-container {
+      display: inline-block;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    #bingo {
+      display: grid;
+      grid-template-columns: repeat(5, 100px);
+      grid-template-rows: repeat(5, 100px);
+      gap: 2px;
+    }
+    .cell {
+      border: 1px solid #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px;
+      font-size: 14px;
+      text-align: center;
+      word-break: break-word;
+      background-color: #fff;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gib einzelne Bingo-Begriffe ein</h1>
+  <div id="word-input">
+    <input type="text" id="custom-word" placeholder="Begriff oder Satz eingeben...">
+    <button onclick="addWord()">Begriff hinzufügen</button>
+  </div>
+
+  <h2>Wähle 25 Begriffe für dein Bingo</h2>
+  <div id="word-pool"></div>
+  <button onclick="generateBingo()">Bingo-Karte erstellen</button>
+  <button onclick="shuffleBingo()">Neu mischen</button>
+  <button onclick="exportPDF()">Als PDF exportieren</button>
+  <div id="bingo-container">
+    <div id="bingo"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    let words = [];
+    let selected = new Set();
+    let currentItems = [];
+
+    function addWord() {
+      const input = document.getElementById("custom-word");
+      const word = input.value.trim();
+      if (!word) return;
+      if (words.includes(word)) {
+        alert("Dieser Begriff wurde bereits hinzugefügt.");
+        return;
+      }
+      words.push(word);
+      input.value = "";
+      updateWordPool();
+    }
+
+    function updateWordPool() {
+      const poolDiv = document.getElementById("word-pool");
+      poolDiv.innerHTML = "";
+      words.forEach(word => {
+        const div = document.createElement("div");
+        div.textContent = word;
+        div.className = "word";
+        if (selected.has(word)) div.classList.add("selected");
+        div.onclick = () => {
+          if (selected.has(word)) {
+            selected.delete(word);
+            div.classList.remove("selected");
+          } else if (selected.size < 25) {
+            selected.add(word);
+            div.classList.add("selected");
+          } else {
+            alert("Du kannst nur 25 Begriffe auswählen.");
+          }
+        };
+        poolDiv.appendChild(div);
+      });
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function generateBingo() {
+      if (selected.size !== 25) {
+        alert("Bitte wähle genau 25 Begriffe aus.");
+        return;
+      }
+      currentItems = shuffle(Array.from(selected));
+      renderBingo();
+    }
+
+    function shuffleBingo() {
+      if (currentItems.length !== 25) {
+        alert("Bitte erst eine Bingo-Karte erstellen.");
+        return;
+      }
+      currentItems = shuffle(currentItems);
+      renderBingo();
+    }
+
+    function renderBingo() {
+      const bingoDiv = document.getElementById("bingo");
+      bingoDiv.innerHTML = "";
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.textContent = currentItems[i];
+        bingoDiv.appendChild(cell);
+      }
+    }
+
+    function exportPDF() {
+      const bingoContainer = document.getElementById("bingo-container");
+      if (!document.getElementById("bingo").hasChildNodes()) {
+        alert("Bitte erst eine Bingo-Karte erstellen.");
+        return;
+      }
+      try {
+        html2pdf().set({
+          margin: 0.5,
+          filename: 'bingo-karte.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        }).from(bingoContainer).save();
+      } catch (err) {
+        console.error("Fehler beim PDF-Export:", err);
+        alert("PDF-Export fehlgeschlagen. Bitte verwende einen modernen Browser oder versuche es erneut.");
+      }
+    }
+  </script>
+</body>
+</html>
